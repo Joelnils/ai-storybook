@@ -1,7 +1,7 @@
 [build]
-  command = "cd netlify/functions && npm install"
-  publish = "."
-  functions = "netlify/functions"
+  command = "cd portfolio/projects/storybook/netlify/functions && npm install"
+  publish = "portfolio/projects/storybook"
+  functions = "portfolio/projects/storybook/netlify/functions"
 
 [build.environment]
   NODE_VERSION = "18"
