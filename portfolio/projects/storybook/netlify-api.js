@@ -142,6 +142,46 @@ class NetlifyAPIClient {
         }
     }
 
+    async generateStoryOnly(storyData) {
+        console.log('📝 Generating story text only...');
+        
+        try {
+            const response = await fetch(`${this.baseURL}/generate-story-only`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(storyData)
+            });
+
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
+            let result;
+            try {
+                result = await response.json();
+            } catch (jsonError) {
+                console.error('Failed to parse response:', jsonError);
+                throw new Error('Server returned invalid response');
+            }
+            
+            console.log('✅ Story text generated');
+            return result;
+
+        } catch (error) {
+            console.error('❌ Story text generation error:', error);
+            throw error;
+        }
+    }
+
     async generateImagesInBackground(story) {
         console.log('🎨 Starting background image generation...');
         

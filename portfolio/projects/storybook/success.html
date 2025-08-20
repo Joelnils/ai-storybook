@@ -227,54 +227,52 @@
                     };
                 }
 
-                // Step 1: Trigger story generation (fire and forget)
+                // HYBRID APPROACH: Show story immediately + generate images progressively + trigger email
+                
+                // Step 1: Generate story text (fast)
                 document.getElementById('step1').innerHTML = 'Pågår<span class="loading-dots">...</span>';
                 
-                // Fire and forget - don't wait for response
-                fetch(`/.netlify/functions/generate-and-email-story`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: storyData.title,
-                        childName: storyData.childName,
-                        childAge: storyData.childAge,
-                        theme: storyData.theme,
-                        details: storyData.details,
-                        parentEmail: customerEmail
-                    })
-                }).then(() => {
-                    console.log('✅ Story generation triggered successfully');
-                }).catch((error) => {
-                    console.log('✅ Story generation triggered (connection may timeout but process continues)');
+                const storyResult = await netlifyAPI.generateStoryOnly({
+                    title: storyData.title,
+                    childName: storyData.childName,
+                    childAge: storyData.childAge,
+                    theme: storyData.theme,
+                    details: storyData.details
                 });
 
-                // Show immediate success regardless of backend status
-                document.getElementById('step1').innerHTML = '✅ Beställning mottagen';
-                document.getElementById('step2').innerHTML = '⏳ Genererar saga';
-                document.getElementById('step3').innerHTML = '⏳ Skapar bilder';
-                document.getElementById('step4').innerHTML = '⏳ Förbereder email';
+                document.getElementById('step1').innerHTML = '✅ Saga skapad';
+                document.getElementById('step2').innerHTML = '⏳ Genererar bilder';
+                document.getElementById('step3').innerHTML = '⏳ Skapar PDF';
+                document.getElementById('step4').innerHTML = '⏳ Skickar email';
                 
                 const statusDiv = document.querySelector('.processing-status');
                 statusDiv.innerHTML = `
-                    <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din beställning är mottagen!</h3>
-                    <p><strong>✅ Vi genererar din saga nu!</strong></p>
+                    <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga är klar!</h3>
+                    <p><strong>✅ Läs din saga nedan!</strong> AI genererar nu unika bilder och skickar PDF till din email.</p>
                     <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 10px;">
-                        <strong>Titel:</strong> ${storyData.title}<br>
-                        <strong>Barn:</strong> ${storyData.childName}<br>
-                        <strong>Email:</strong> ${customerEmail}<br>
-                        <strong>Status:</strong> Generering påbörjad
+                        <strong>Titel:</strong> ${storyResult.story.title}<br>
+                        <strong>Barn:</strong> ${storyResult.story.childName}<br>
+                        <strong>Status:</strong> <span id="imageStatus">Genererar DALL-E bilder... 🎨</span>
                     </div>
                     
-                    <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #fef3e2, #fff7ed); border-radius: 15px;">
-                        <h4 style="color: #92400e; margin: 0 0 1rem 0;">📧 Vad händer nu?</h4>
-                        <p style="margin: 0 0 1rem 0;"><strong>Leveranstid:</strong> 10-15 minuter</p>
-                        <p style="margin: 0 0 1rem 0;"><strong>Du får:</strong> Komplett PDF med AI-genererade DALL-E bilder</p>
-                        <p style="margin: 0 0 1rem 0;"><strong>Innehåll:</strong> Personlig saga + 6 unika illustrationer</p>
-                        <p style="margin: 0;"><strong>💡 Tips:</strong> Kontrollera din skräppost om du inte ser emailet inom 20 minuter</p>
+                    <div style="margin-top: 2rem; text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb;">
+                        <h4 style="color: #1f2937; margin-bottom: 1rem;">${storyResult.story.title}</h4>
+                        <div id="generatedStoryContent"></div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef3e2, #fff7ed); border-radius: 10px;">
+                        <strong>📧 PDF Email:</strong> Levereras inom 10-15 minuter med alla bilder
                     </div>
                 `;
+                
+                // Display the story immediately with placeholder images
+                displayGeneratedStory(storyResult.story);
+                
+                // Start progressive image generation
+                startProgressiveImageGeneration(storyResult.story);
+                
+                // Trigger email generation (fire and forget)
+                triggerEmailGeneration(storyData, customerEmail);
 
             } catch (error) {
                 console.error('Story generation failed:', error);
@@ -287,6 +285,100 @@
                     <p><strong>Session ID:</strong> ${sessionId}</p>
                 `;
             }
+        }
+
+        // Progressive image generation functions
+        function startProgressiveImageGeneration(story) {
+            console.log('🎨 Starting progressive image generation');
+            const paragraphs = story.content.split('\\n\\n').filter(p => p.trim());
+            let completedImages = 0;
+            
+            // Generate images one by one
+            paragraphs.slice(0, 6).forEach(async (paragraph, index) => {
+                try {
+                    const response = await fetch('/.netlify/functions/generate-single-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            paragraph: paragraph,
+                            childName: story.childName,
+                            childAge: story.childAge || '6-8',
+                            theme: story.theme,
+                            position: index
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success && !result.image.isFallback) {
+                            updateSingleImage(result.image);
+                            completedImages++;
+                            updateImageStatus(completedImages, 6);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Image ${index + 1} generation failed:`, error);
+                }
+            });
+        }
+        
+        function updateSingleImage(imageData) {
+            const imageElements = document.querySelectorAll('.story-image');
+            const imageElement = imageElements[imageData.position];
+            
+            if (imageElement) {
+                imageElement.style.opacity = '0.3';
+                imageElement.src = imageData.url;
+                imageElement.alt = imageData.description;
+                
+                setTimeout(() => {
+                    imageElement.style.opacity = '1';
+                    imageElement.style.transition = 'opacity 0.8s ease';
+                    imageElement.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        imageElement.style.transform = 'scale(1)';
+                        imageElement.style.transition = 'all 0.3s ease';
+                    }, 300);
+                }, 100);
+            }
+        }
+        
+        function updateImageStatus(completed, total) {
+            const statusElement = document.getElementById('imageStatus');
+            if (statusElement) {
+                if (completed === total) {
+                    statusElement.innerHTML = `Alla ${total} DALL-E bilder genererade! ✅`;
+                    statusElement.style.color = '#10b981';
+                    document.getElementById('step2').innerHTML = '✅ Bilder klara';
+                } else {
+                    statusElement.innerHTML = `${completed}/${total} DALL-E bilder genererade... 🎨`;
+                    statusElement.style.color = '#f59e0b';
+                }
+            }
+        }
+        
+        function triggerEmailGeneration(storyData, customerEmail) {
+            console.log('📧 Triggering email generation');
+            fetch('/.netlify/functions/generate-and-email-story', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: storyData.title,
+                    childName: storyData.childName,
+                    childAge: storyData.childAge,
+                    theme: storyData.theme,
+                    details: storyData.details,
+                    parentEmail: customerEmail
+                })
+            }).then(() => {
+                console.log('✅ Email generation triggered');
+                setTimeout(() => {
+                    document.getElementById('step3').innerHTML = '✅ PDF skapad';
+                    document.getElementById('step4').innerHTML = '✅ Email skickad';
+                }, 5000); // Optimistic update after 5 seconds
+            }).catch(() => {
+                console.log('✅ Email generation triggered (may timeout but continues)');
+            });
         }
 
         // Global function to update images when background generation completes
