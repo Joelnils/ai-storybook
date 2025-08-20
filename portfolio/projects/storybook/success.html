@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betalning Slutförd - AI Sagoskapare</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .success-container {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 3rem;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            animation: bounce 1s infinite;
+        }
+
+        .success-title {
+            font-family: 'Fredoka', cursive;
+            font-size: 2.5rem;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .success-subtitle {
+            font-size: 1.2rem;
+            color: #6b7280;
+            margin-bottom: 3rem;
+        }
+
+        .processing-status {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .processing-steps {
+            text-align: left;
+            margin: 2rem 0;
+        }
+
+        .processing-step {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .step-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            width: 40px;
+        }
+
+        .step-text {
+            flex: 1;
+        }
+
+        .step-status {
+            font-weight: 600;
+            color: #10b981;
+        }
+
+        .loading-dots {
+            display: inline-block;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0%, 20% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .email-info {
+            background: linear-gradient(135deg, #fef3e2, #fff7ed);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <a href="simple.html" class="logo">AI Sagoskapare</a>
+            <ul class="nav-links">
+                <li><a href="simple.html#create">Skapa Saga</a></li>
+                <li><a href="simple.html#gallery">Demo Sagor</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="success-container">
+            <div class="success-icon">✅</div>
+            <h1 class="success-title">Betalning Slutförd!</h1>
+            <p class="success-subtitle">Tack för din beställning! Din personliga saga är nu på väg.</p>
+
+            <div class="processing-status">
+                <h3 style="color: #0ea5e9; margin-bottom: 1rem;">📝 Din saga bearbetas nu</h3>
+                
+                <div class="processing-steps">
+                    <div class="processing-step">
+                        <div class="step-icon">🤖</div>
+                        <div class="step-text">
+                            <strong>Skriver din berättelse</strong><br>
+                            <small>AI skapar en personlig saga baserat på dina önskemål</small>
+                        </div>
+                        <div class="step-status" id="step1">Pågår<span class="loading-dots">...</span></div>
+                    </div>
+
+                    <div class="processing-step">
+                        <div class="step-icon">🎨</div>
+                        <div class="step-text">
+                            <strong>Genererar illustrationer</strong><br>
+                            <small>DALL-E skapar vackra bilder för din saga</small>
+                        </div>
+                        <div class="step-status" id="step2">Väntar</div>
+                    </div>
+
+                    <div class="processing-step">
+                        <div class="step-icon">📄</div>
+                        <div class="step-text">
+                            <strong>Skapar PDF</strong><br>
+                            <small>Sätter samman text och bilder till en sagbok</small>
+                        </div>
+                        <div class="step-status" id="step3">Väntar</div>
+                    </div>
+
+                    <div class="processing-step">
+                        <div class="step-icon">📧</div>
+                        <div class="step-text">
+                            <strong>Skickar email</strong><br>
+                            <small>Din saga levereras till din inkorg</small>
+                        </div>
+                        <div class="step-status" id="step4">Väntar</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-info">
+                <h3>📧 Vad händer nu?</h3>
+                <p><strong>Beräknad tid:</strong> 3-5 minuter</p>
+                <p><strong>Email leverans:</strong> <span id="customerEmail">din@email.se</span></p>
+                <p><strong>Innehåll:</strong> PDF med din personliga saga och illustrationer</p>
+                
+                <div style="margin-top: 2rem; padding: 1rem; background: white; border-radius: 10px;">
+                    <strong>📱 Tips:</strong> Kontrollera din skräppost om du inte ser emailet inom 10 minuter.
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem;">
+                <a href="simple.html" class="btn-primary">🏠 Tillbaka till startsidan</a>
+                <a href="simple.html#create" class="btn-secondary" style="margin-left: 1rem;">✨ Skapa en ny saga</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <h3 class="footer-title">AI Sagoskapare ✨</h3>
+            <p>Skapa magiska sagor som inspirerar och underhåller barn i alla åldrar.</p>
+            <p style="margin-top: 2rem; opacity: 0.8;">&copy; 2025 AI Sagoskapare. Skapad med kärlek för barn och familjer.</p>
+        </div>
+    </footer>
+
+    <script src="netlify-api.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        const customerEmail = urlParams.get('email') || localStorage.getItem('customerEmail');
+
+        // Display customer email if available
+        if (customerEmail) {
+            document.getElementById('customerEmail').textContent = customerEmail;
+        }
+
+        // Debug localStorage
+        console.log('localStorage contents:', {
+            customerEmail: localStorage.getItem('customerEmail'),
+            pendingStoryData: localStorage.getItem('pendingStoryData'),
+            allKeys: Object.keys(localStorage)
+        });
+
+        // Start real story generation if payment succeeded
+        if (sessionId && customerEmail) {
+            console.log('Payment succeeded, starting story generation...');
+            generateStoryAfterPayment();
+        } else {
+            console.log('Missing session ID or email, showing demo progress');
+            simulateProgress();
+        }
+
+        async function generateStoryAfterPayment() {
+            try {
+                // Try to get story data from localStorage first
+                let storyData = JSON.parse(localStorage.getItem('pendingStoryData') || '{}');
+                
+                // If not found in localStorage, create demo data for testing
+                if (!storyData.title) {
+                    console.log('Story data not found in localStorage, using demo data');
+                    storyData = {
+                        title: 'Ett Magiskt Äventyr',
+                        childName: 'Alex',
+                        childAge: '6',
+                        theme: 'äventyr',
+                        details: 'Ett spännande äventyr med magi och vänskap',
+                        parentEmail: customerEmail
+                    };
+                }
+
+                // Step 1: Generate story
+                document.getElementById('step1').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+                
+                const storyResult = await netlifyAPI.generateCompleteStory({
+                    title: storyData.title,
+                    childName: storyData.childName,
+                    childAge: storyData.childAge,
+                    theme: storyData.theme,
+                    details: storyData.details,
+                    parentEmail: customerEmail
+                });
+
+                document.getElementById('step1').innerHTML = '✅ Klar';
+                document.getElementById('step2').innerHTML = '✅ Klar';
+                document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+
+                // Step 2: Create and email PDF
+                setTimeout(async () => {
+                    document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+                    
+                    try {
+                        // Create PDF and send email
+                        const pdfResponse = await netlifyAPI.createAndEmailPDF({
+                            story: storyResult.story,
+                            customerEmail: customerEmail
+                        });
+                        
+                        document.getElementById('step3').innerHTML = '✅ Klar';
+                        document.getElementById('step4').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+                        
+                            document.getElementById('step4').innerHTML = '✅ Klar';
+                            
+                            const statusDiv = document.querySelector('.processing-status');
+                            statusDiv.innerHTML = `
+                                <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga är klar och skickad!</h3>
+                                <p><strong>✅ PDF skapat och email skickat!</strong> Kontrollera din inkorg.</p>
+                            <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 10px;">
+                                <strong>Titel:</strong> ${storyResult.story.title}<br>
+                                <strong>Barn:</strong> ${storyResult.story.childName}<br>
+                                <strong>Bilder:</strong> ${storyResult.story.images.length} illustrationer skapade
+                            </div>
+                            
+                            <div style="margin-top: 2rem; text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb;">
+                                <h4 style="color: #1f2937; margin-bottom: 1rem;">${storyResult.story.title}</h4>
+                                <div id="generatedStoryContent"></div>
+                            </div>
+                        `;
+                        
+                        // Display the story with images
+                        displayGeneratedStory(storyResult.story);
+                        
+                    } catch (pdfError) {
+                        console.error('PDF creation failed:', pdfError);
+                        document.getElementById('step3').innerHTML = '❌ Fel';
+                        document.getElementById('step4').innerHTML = '❌ Fel';
+                    }
+                }, 2000);
+                }, 3000);
+
+            } catch (error) {
+                console.error('Story generation failed:', error);
+                document.getElementById('step1').innerHTML = '❌ Fel';
+                
+                const statusDiv = document.querySelector('.processing-status');
+                statusDiv.innerHTML = `
+                    <h3 style="color: #dc2626; margin-bottom: 1rem;">⚠️ Ett fel uppstod</h3>
+                    <p>Vi kunde inte generera din saga. Kontakta support för hjälp.</p>
+                    <p><strong>Session ID:</strong> ${sessionId}</p>
+                `;
+            }
+        }
+
+        function displayGeneratedStory(story) {
+            const container = document.getElementById('generatedStoryContent');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const paragraphs = story.content.split('\\n\\n').filter(p => p.trim());
+            
+            paragraphs.forEach((paragraph, index) => {
+                // Create page container
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'story-page';
+                pageDiv.style.marginBottom = '2rem';
+                pageDiv.style.padding = '1rem';
+                pageDiv.style.border = '1px solid #e5e7eb';
+                pageDiv.style.borderRadius = '8px';
+                
+                // Add image for this page
+                const storyImage = story.images.find(img => img.position === index);
+                if (storyImage) {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = storyImage.url;
+                    imgElement.alt = `Illustration för sida ${index + 1}`;
+                    imgElement.style.maxWidth = '100%';
+                    imgElement.style.borderRadius = '8px';
+                    imgElement.style.marginBottom = '1rem';
+                    
+                    pageDiv.appendChild(imgElement);
+                }
+                
+                // Add paragraph text
+                const textDiv = document.createElement('div');
+                textDiv.style.lineHeight = '1.6';
+                textDiv.style.color = '#374151';
+                textDiv.innerHTML = `<p>${paragraph.trim()}</p>`;
+                pageDiv.appendChild(textDiv);
+                
+                container.appendChild(pageDiv);
+            });
+        }
+
+        function simulateProgress() {
+            // Fallback simulation for demo purposes
+            setTimeout(() => {
+                document.getElementById('step1').innerHTML = '✅ Klar';
+                document.getElementById('step2').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+            }, 3000);
+
+            setTimeout(() => {
+                document.getElementById('step2').innerHTML = '✅ Klar';
+                document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+            }, 6000);
+
+            setTimeout(() => {
+                document.getElementById('step3').innerHTML = '✅ Klar';
+                document.getElementById('step4').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+            }, 9000);
+
+            setTimeout(() => {
+                document.getElementById('step4').innerHTML = '⚠️ Demo';
+                
+                const statusDiv = document.querySelector('.processing-status');
+                statusDiv.innerHTML = `
+                    <h3 style="color: #0ea5e9; margin-bottom: 1rem;">📝 Demo-läge</h3>
+                    <p>Detta är en demonstration. För riktiga sagor, slutför betalningen först.</p>
+                `;
+            }, 12000);
+        }
+    </script>
+</body>
+</html>

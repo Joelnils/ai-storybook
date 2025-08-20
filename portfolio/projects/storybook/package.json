@@ -1,0 +1,28 @@
+{
+  "name": "ai-storybook-creator",
+  "version": "1.0.0",
+  "description": "AI Storybook Creator with Netlify Functions",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "stripe": "^14.9.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "storybook",
+    "children",
+    "openai",
+    "dalle",
+    "stripe"
+  ]
+}
