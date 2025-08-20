@@ -103,12 +103,10 @@ class NetlifyAPIClient {
     }
 
     async generateCompleteStory(storyData) {
-        console.log('🎯 Generating story with two-phase approach...');
+        console.log('🎯 Starting email delivery story generation...');
         
         try {
-            // Phase 1: Generate story text quickly
-            console.log('📝 Phase 1: Generating story text...');
-            const storyResponse = await fetch(`${this.baseURL}/generate-story-text`, {
+            const response = await fetch(`${this.baseURL}/generate-and-email-story`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -116,33 +114,27 @@ class NetlifyAPIClient {
                 body: JSON.stringify(storyData)
             });
 
-            if (!storyResponse.ok) {
-                let errorMessage = `HTTP ${storyResponse.status}`;
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}`;
                 try {
-                    const errorData = await storyResponse.json();
+                    const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
                 } catch (e) {
-                    errorMessage = storyResponse.statusText || errorMessage;
+                    errorMessage = response.statusText || errorMessage;
                 }
                 throw new Error(errorMessage);
             }
 
-            let storyResult;
+            let result;
             try {
-                storyResult = await storyResponse.json();
+                result = await response.json();
             } catch (jsonError) {
-                console.error('Failed to parse story response:', jsonError);
+                console.error('Failed to parse response:', jsonError);
                 throw new Error('Server returned invalid response');
             }
             
-            console.log('✅ Story text generated, starting background image generation...');
-            
-            // Phase 2: Start background image generation (fire and forget)
-            setTimeout(() => {
-                this.generateImagesInBackground(storyResult.story);
-            }, 100);
-            
-            return storyResult;
+            console.log('✅ Story generation and email delivery initiated');
+            return result;
 
         } catch (error) {
             console.error('❌ Story generation error:', error);

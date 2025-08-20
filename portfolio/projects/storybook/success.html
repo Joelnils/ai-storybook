@@ -227,10 +227,10 @@
                     };
                 }
 
-                // Step 1: Generate story
+                // Step 1: Start story generation and email delivery
                 document.getElementById('step1').innerHTML = 'Pågår<span class="loading-dots">...</span>';
                 
-                const storyResult = await netlifyAPI.generateCompleteStory({
+                const result = await netlifyAPI.generateCompleteStory({
                     title: storyData.title,
                     childName: storyData.childName,
                     childAge: storyData.childAge,
@@ -241,30 +241,27 @@
 
                 document.getElementById('step1').innerHTML = '✅ Klar';
                 document.getElementById('step2').innerHTML = '✅ Klar';
-                document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
-
-                // Show completed story immediately
                 document.getElementById('step3').innerHTML = '✅ Klar';
                 document.getElementById('step4').innerHTML = '✅ Klar';
                 
                 const statusDiv = document.querySelector('.processing-status');
                 statusDiv.innerHTML = `
-                    <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga är klar!</h3>
-                    <p><strong>✅ Berättelse skapad!</strong> <span id="imageStatus">AI genererar DALL-E bilder... ⏳</span></p>
+                    <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga har skickats!</h3>
+                    <p><strong>✅ Saga genererad och skickad till din email!</strong></p>
                     <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 10px;">
-                        <strong>Titel:</strong> ${storyResult.story.title}<br>
-                        <strong>Barn:</strong> ${storyResult.story.childName}<br>
-                        <strong>Status:</strong> Story klar, bilder genereras i bakgrunden
+                        <strong>Titel:</strong> ${storyData.title}<br>
+                        <strong>Barn:</strong> ${storyData.childName}<br>
+                        <strong>Email:</strong> ${customerEmail}<br>
+                        <strong>DALL-E bilder:</strong> ${result.realImages || 'Genereras'} av ${result.totalImages || 6} bilder
                     </div>
                     
-                    <div style="margin-top: 2rem; text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb;">
-                        <h4 style="color: #1f2937; margin-bottom: 1rem;">${storyResult.story.title}</h4>
-                        <div id="generatedStoryContent"></div>
+                    <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #fef3e2, #fff7ed); border-radius: 15px;">
+                        <h4 style="color: #92400e; margin: 0 0 1rem 0;">📧 Vad händer nu?</h4>
+                        <p style="margin: 0 0 1rem 0;"><strong>Leveranstid:</strong> 5-10 minuter</p>
+                        <p style="margin: 0 0 1rem 0;"><strong>Du får:</strong> Komplett PDF med AI-genererade bilder</p>
+                        <p style="margin: 0;"><strong>💡 Tips:</strong> Kontrollera din skräppost om du inte ser emailet</p>
                     </div>
                 `;
-                
-                // Display the story with images (initially placeholders)
-                displayGeneratedStory(storyResult.story);
 
             } catch (error) {
                 console.error('Story generation failed:', error);
