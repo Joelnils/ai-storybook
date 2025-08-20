@@ -227,7 +227,16 @@ Och så levde ${childName} lyckligt i många år framöver, alltid redo för nä
 
 async function createStoryPDF(story) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ 
+      margin: 40,
+      size: 'A4',
+      info: {
+        Title: story.title,
+        Author: 'AI Sagoskapare',
+        Subject: `Personlig saga för ${story.childName}`,
+        Creator: 'AI Sagoskapare'
+      }
+    });
     const buffers = [];
 
     doc.on('data', buffers.push.bind(buffers));
@@ -235,98 +244,336 @@ async function createStoryPDF(story) {
       const pdfData = Buffer.concat(buffers);
       resolve(pdfData);
     });
+    doc.on('error', reject);
 
-    // Title page
-    doc.fontSize(24).font('Helvetica-Bold').text(story.title, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).font('Helvetica').text(`En personlig saga för ${story.childName}`, { align: 'center' });
-    doc.moveDown(3);
+    // Define colors
+    const primaryColor = '#4F46E5';
+    const textColor = '#1F2937';
+    const subtitleColor = '#6B7280';
+    
+    // Beautiful title page
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#F8FAFC');
+    
+    // Decorative header border
+    doc.rect(0, 0, doc.page.width, 100)
+       .fill(primaryColor);
+    
+    // Title
+    doc.fillColor('#FFFFFF')
+       .fontSize(32)
+       .font('Helvetica-Bold')
+       .text(story.title, 40, 30, { align: 'center', width: doc.page.width - 80 });
+    
+    // Subtitle
+    doc.fillColor('#E0E7FF')
+       .fontSize(18)
+       .font('Helvetica')
+       .text(`En personlig saga för ${story.childName}`, 40, 75, { 
+         align: 'center', 
+         width: doc.page.width - 80 
+       });
 
-    // Story content with images
+    // Decorative elements
+    doc.circle(100, 150, 30).fill('#FEF3C7');
+    doc.circle(doc.page.width - 100, 150, 25).fill('#DBEAFE');
+    doc.circle(150, 200, 20).fill('#F3E8FF');
+    
+    // Main content area with white background
+    doc.rect(20, 120, doc.page.width - 40, doc.page.height - 200)
+       .fill('#FFFFFF')
+       .stroke('#E5E7EB');
+
+    // Welcome message
+    doc.fillColor(textColor)
+       .fontSize(16)
+       .font('Helvetica-Bold')
+       .text('🌟 Din personliga saga 🌟', 40, 160, { align: 'center', width: doc.page.width - 80 });
+    
+    doc.fillColor(subtitleColor)
+       .fontSize(14)
+       .font('Helvetica')
+       .text(`Skapad speciellt för ${story.childName}`, 40, 190, { align: 'center', width: doc.page.width - 80 });
+    
+    doc.text('Tema: ' + story.theme, 40, 220, { align: 'center', width: doc.page.width - 80 });
+
+    // Story content pages
     const paragraphs = story.content.split('\n\n').filter(p => p.trim());
     
     paragraphs.forEach((paragraph, index) => {
+      doc.addPage();
+      
+      // Page background
+      doc.rect(0, 0, doc.page.width, doc.page.height).fill('#FEFEFE');
+      
+      // Header stripe
+      doc.rect(0, 0, doc.page.width, 60)
+         .fill('#F8F9FA')
+         .stroke('#E5E7EB');
+      
+      // Page number
+      doc.fillColor(primaryColor)
+         .fontSize(12)
+         .font('Helvetica-Bold')
+         .text(`Sida ${index + 1}`, doc.page.width - 100, 20);
+      
+      // Chapter indicator
+      doc.fillColor(subtitleColor)
+         .fontSize(10)
+         .font('Helvetica')
+         .text(`Kapitel ${index + 1}`, 40, 20);
+
+      let yPosition = 100;
+
       // Add image if available
       const image = story.images.find(img => img.position === index);
       if (image && image.buffer) {
         try {
-          const pageWidth = doc.page.width - 100;
-          const imgWidth = Math.min(pageWidth, 400);
+          // Image container with shadow
+          const imgWidth = Math.min(doc.page.width - 120, 350);
           const x = (doc.page.width - imgWidth) / 2;
           
-          doc.image(image.buffer, x, doc.y, { width: imgWidth });
-          doc.moveDown(2);
+          // Shadow effect
+          doc.rect(x + 3, yPosition + 3, imgWidth, imgWidth * 0.75)
+             .fill('#E5E7EB');
+          
+          // White border
+          doc.rect(x - 5, yPosition - 5, imgWidth + 10, (imgWidth * 0.75) + 10)
+             .fill('#FFFFFF')
+             .stroke('#D1D5DB');
+          
+          doc.image(image.buffer, x, yPosition, { 
+            width: imgWidth,
+            height: imgWidth * 0.75,
+            fit: [imgWidth, imgWidth * 0.75]
+          });
+          
+          yPosition += (imgWidth * 0.75) + 30;
+          
+          // Image caption
+          doc.fillColor(subtitleColor)
+             .fontSize(10)
+             .font('Helvetica-Oblique')
+             .text(image.description, 40, yPosition - 20, { 
+               align: 'center', 
+               width: doc.page.width - 80 
+             });
+          
         } catch (imgError) {
           console.warn('Failed to add image to PDF:', imgError.message);
+          yPosition += 20;
         }
       }
 
-      // Add paragraph text
-      doc.fontSize(12).font('Helvetica').text(paragraph.trim(), {
-        align: 'left',
-        lineGap: 5
-      });
-      doc.moveDown(2);
+      // Text container
+      const textY = Math.max(yPosition, 250);
+      doc.rect(40, textY - 10, doc.page.width - 80, 200)
+         .fill('#FFFFFF')
+         .stroke('#F3F4F6');
 
-      // Add page break if not last paragraph
-      if (index < paragraphs.length - 1) {
-        doc.addPage();
+      // Paragraph text with better typography
+      doc.fillColor(textColor)
+         .fontSize(14)
+         .font('Helvetica')
+         .text(paragraph.trim(), 60, textY, {
+           align: 'justify',
+           width: doc.page.width - 120,
+           lineGap: 8,
+           paragraphGap: 12
+         });
+
+      // Decorative footer
+      doc.rect(0, doc.page.height - 40, doc.page.width, 40)
+         .fill('#F8F9FA');
+      
+      // Footer pattern
+      for (let i = 0; i < doc.page.width; i += 30) {
+        doc.circle(i, doc.page.height - 20, 3).fill('#E5E7EB');
       }
     });
+
+    // Final page
+    doc.addPage();
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#F0F9FF');
+    
+    doc.fillColor(primaryColor)
+       .fontSize(24)
+       .font('Helvetica-Bold')
+       .text('Slut på sagan! 🌟', 40, 200, { align: 'center', width: doc.page.width - 80 });
+    
+    doc.fillColor(textColor)
+       .fontSize(16)
+       .font('Helvetica')
+       .text(`Tack för att du läste ${story.childName}s äventyr!`, 40, 250, { 
+         align: 'center', 
+         width: doc.page.width - 80 
+       });
+    
+    doc.fillColor(subtitleColor)
+       .fontSize(12)
+       .font('Helvetica-Oblique')
+       .text('Skapad med AI Sagoskapare', 40, 300, { 
+         align: 'center', 
+         width: doc.page.width - 80 
+       });
 
     doc.end();
   });
 }
 
 async function sendStoryEmail(customerEmail, story, pdfBuffer) {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
+  const EMAIL_USER = process.env.EMAIL_USER;
+  const EMAIL_PASS = process.env.EMAIL_PASS;
+  
+  // Check if email credentials are configured
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.error('❌ Email credentials not configured');
+    console.log('EMAIL_USER exists:', !!EMAIL_USER);
+    console.log('EMAIL_PASS exists:', !!EMAIL_PASS);
+    throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASS environment variables in Netlify.');
+  }
+
+  console.log('📧 Configuring email transport...');
+  
+  let transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS
+      }
+    });
+    
+    // Test the connection
+    await transporter.verify();
+    console.log('✅ Email transport verified successfully');
+    
+  } catch (transportError) {
+    console.error('❌ Email transport configuration failed:', transportError.message);
+    
+    // Try alternative SMTP configuration
+    try {
+      console.log('🔄 Trying alternative SMTP configuration...');
+      transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: EMAIL_USER,
+          pass: EMAIL_PASS
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+      
+      await transporter.verify();
+      console.log('✅ Alternative SMTP configuration successful');
+      
+    } catch (altError) {
+      console.error('❌ Alternative SMTP also failed:', altError.message);
+      throw new Error(`Email configuration failed: ${transportError.message}. Please check your Gmail app password.`);
     }
-  });
+  }
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"AI Sagoskapare" <${EMAIL_USER}>`,
     to: customerEmail,
-    subject: `Din personliga saga: ${story.title}`,
+    subject: `🌟 Din personliga saga: "${story.title}" är klar!`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #4F46E5;">🎉 Din saga är klar!</h2>
-        
-        <p>Hej!</p>
-        
-        <p>Vi har skapat en personlig saga för <strong>${story.childName}</strong>:</p>
-        
-        <div style="background: #F3F4F6; padding: 20px; border-radius: 10px; margin: 20px 0;">
-          <h3 style="margin: 0; color: #374151;">${story.title}</h3>
-          <p style="margin: 10px 0 0 0; color: #6B7280;">
-            📖 Personlig berättelse<br>
-            🎨 ${story.images} AI-genererade illustrationer<br>
-            📄 Komplett PDF bifogad
-          </p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Din saga är klar!</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: 'Helvetica Neue', Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #FFFFFF; margin: 0; font-size: 28px; font-weight: bold;">🎉 Din saga är klar!</h1>
+            <p style="color: #E0E7FF; margin: 10px 0 0 0; font-size: 16px;">Personlig berättelse skapad med AI</p>
+          </div>
+          
+          <!-- Main content -->
+          <div style="padding: 40px 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hej!</p>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Vi har skapat en helt unik och personlig saga för <strong style="color: #4F46E5;">${story.childName}</strong>:
+            </p>
+            
+            <!-- Story info box -->
+            <div style="background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%); border: 2px solid #0EA5E9; border-radius: 15px; padding: 25px; margin: 30px 0;">
+              <h2 style="color: #0F172A; margin: 0 0 15px 0; font-size: 22px; text-align: center;">📖 ${story.title}</h2>
+              
+              <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+                <div style="background: #FFFFFF; padding: 10px 15px; border-radius: 20px; border: 1px solid #E2E8F0;">
+                  <span style="color: #475569; font-size: 14px;">📚 Personlig berättelse</span>
+                </div>
+                <div style="background: #FFFFFF; padding: 10px 15px; border-radius: 20px; border: 1px solid #E2E8F0;">
+                  <span style="color: #475569; font-size: 14px;">🎨 ${story.images} AI-bilder</span>
+                </div>
+                <div style="background: #FFFFFF; padding: 10px 15px; border-radius: 20px; border: 1px solid #E2E8F0;">
+                  <span style="color: #475569; font-size: 14px;">📄 Professionell PDF</span>
+                </div>
+              </div>
+            </div>
+            
+            <h3 style="color: #1F2937; font-size: 18px; margin: 30px 0 15px 0;">🎯 Vad kan du göra med din saga?</h3>
+            
+            <div style="background: #F9FAFB; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0;">
+              <ul style="margin: 0; padding: 0; list-style: none;">
+                <li style="color: #374151; font-size: 15px; margin: 8px 0; padding-left: 25px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #10B981;">📱</span>
+                  Läs direkt på din telefon, surfplatta eller dator
+                </li>
+                <li style="color: #374151; font-size: 15px; margin: 8px 0; padding-left: 25px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #10B981;">🖨️</span>
+                  Skriv ut för att skapa en fysisk bok att hålla i
+                </li>
+                <li style="color: #374151; font-size: 15px; margin: 8px 0; padding-left: 25px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #10B981;">👨‍👩‍👧‍👦</span>
+                  Dela med vänner, familj och mor-/farföräldrar
+                </li>
+                <li style="color: #374151; font-size: 15px; margin: 8px 0; padding-left: 25px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #10B981;">💾</span>
+                  Spara som en minnesgåva för framtiden
+                </li>
+              </ul>
+            </div>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0;">
+              Vi hoppas att <strong>${story.childName}</strong> kommer att älska sitt personliga äventyr! 
+              Varje saga är unik och skapad med avancerad AI-teknologi för att ge den bästa läsupplevelsen.
+            </p>
+            
+            <div style="background: #FEF3C7; border-radius: 10px; padding: 20px; margin: 30px 0; text-align: center;">
+              <p style="color: #92400E; margin: 0; font-size: 14px; font-style: italic;">
+                💡 Tips: PDF:en öppnas bäst i en PDF-läsare som Adobe Reader för bästa kvalitet!
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #F8FAFC; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+            <p style="color: #6B7280; margin: 0 0 10px 0; font-size: 16px;">
+              Varma hälsningar,<br>
+              <strong style="color: #4F46E5;">AI Sagoskapare</strong> 🤖✨
+            </p>
+            
+            <div style="margin: 20px 0;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0; line-height: 1.4;">
+                Detta email skickades eftersom du beställde en personlig saga från AI Sagoskapare.<br>
+                Skapad med OpenAI DALL-E 3 och GPT-teknologi.
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <p>Din saga är bifogad som en PDF-fil som du kan:</p>
-        <ul>
-          <li>Läsa direkt på din enhet</li>
-          <li>Skriva ut för att skapa en fysisk bok</li>
-          <li>Dela med vänner och familj</li>
-        </ul>
-        
-        <p>Vi hoppas att ${story.childName} kommer att älska sin personliga saga!</p>
-        
-        <p style="margin-top: 30px;">
-          Varma hälsningar,<br>
-          <strong>AI Sagoskapare</strong>
-        </p>
-        
-        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-        <p style="font-size: 12px; color: #9CA3AF;">
-          Detta email skickades eftersom du beställde en personlig saga från AI Sagoskapare.
-        </p>
-      </div>
+      </body>
+      </html>
     `,
     attachments: [
       {
@@ -337,5 +584,14 @@ async function sendStoryEmail(customerEmail, story, pdfBuffer) {
     ]
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    console.log(`📧 Sending email to: ${customerEmail}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', info.messageId);
+    return info;
+    
+  } catch (sendError) {
+    console.error('❌ Failed to send email:', sendError.message);
+    throw new Error(`Email delivery failed: ${sendError.message}`);
+  }
 }
