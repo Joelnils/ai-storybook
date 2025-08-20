@@ -284,26 +284,41 @@
             console.log('🎨 Updating story images for:', storyId);
             const imageElements = document.querySelectorAll('.story-image');
             
+            let updatedCount = 0;
             newImages.forEach(newImage => {
                 const imageElement = imageElements[newImage.position];
-                if (imageElement) {
+                if (imageElement && !newImage.isFallback) {
+                    // Only update if it's a real DALL-E image (not fallback)
                     imageElement.src = newImage.url;
                     imageElement.alt = newImage.description;
                     
-                    // Add loading animation
-                    imageElement.style.opacity = '0.5';
+                    // Add smooth transition
+                    imageElement.style.opacity = '0.3';
                     setTimeout(() => {
                         imageElement.style.opacity = '1';
-                        imageElement.style.transition = 'opacity 0.5s';
+                        imageElement.style.transition = 'opacity 0.8s ease-in-out';
+                        imageElement.style.transform = 'scale(1.02)';
+                        setTimeout(() => {
+                            imageElement.style.transform = 'scale(1)';
+                            imageElement.style.transition = 'all 0.3s ease';
+                        }, 300);
                     }, 100);
+                    
+                    updatedCount++;
                 }
             });
             
-            // Update status
+            // Update status with more informative message
             const statusElement = document.getElementById('imageStatus');
             if (statusElement) {
                 const realImages = newImages.filter(img => !img.isFallback);
-                statusElement.innerHTML = `${realImages.length} DALL-E bilder genererade! ✅`;
+                if (realImages.length > 0) {
+                    statusElement.innerHTML = `${realImages.length} DALL-E bilder genererade! ✅ (Övriga använder demo-bilder)`;
+                    statusElement.style.color = '#10b981';
+                } else {
+                    statusElement.innerHTML = `DALL-E generation misslyckades, använder demo-bilder ⚠️`;
+                    statusElement.style.color = '#f59e0b';
+                }
             }
         };
 

@@ -36,16 +36,24 @@ exports.handler = async (event, context) => {
     const images = [];
     const maxImages = Math.min(paragraphs.length, 6);
     
-    // Generate images one by one with generous timeouts
-    for (let i = 0; i < maxImages; i++) {
-      console.log(`🎨 Generating image ${i + 1}/${maxImages}`);
-      
-      const paragraph = paragraphs[i];
+    // Try to generate just 2 images within function timeout limits
+    const targetImages = Math.min(maxImages, 2); // Reduce to 2 for reliability
+    console.log(`🎨 Attempting to generate ${targetImages} images within timeout limits`);
+    
+    // Generate images with aggressive timeout protection
+    const generateWithTimeout = async (i, paragraph) => {
       const imagePrompt = `Children's book illustration: A ${childAge} year old child named ${childName} in a ${theme} adventure. Scene: ${paragraph.substring(0, 150)}. Style: Cartoon, child-friendly, colorful, engaging illustration for Swedish children's book. NO TEXT OR WORDS in the image.`;
       
       try {
+        // Set 60 second timeout per image (aggressive)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        
+        console.log(`🎨 Starting image ${i + 1} generation...`);
+        
         const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
+          signal: controller.signal,
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json'
@@ -58,41 +66,61 @@ exports.handler = async (event, context) => {
             n: 1
           })
         });
+        
+        clearTimeout(timeoutId);
 
         if (imageResponse.ok) {
           const imageResult = await imageResponse.json();
           if (imageResult.data?.[0]?.url) {
-            images.push({
+            console.log(`✅ Successfully generated image ${i + 1}`);
+            return {
               position: i,
               url: imageResult.data[0].url,
               description: `${childName}'s adventure - Scene ${i + 1}`,
               prompt: imagePrompt
-            });
-            console.log(`✅ Generated image ${i + 1}: ${imageResult.data[0].url}`);
+            };
           }
         } else {
-          console.warn(`⚠️ Failed to generate image ${i + 1}:`, await imageResponse.text());
-          // Use demo image as fallback
-          images.push({
-            position: i,
-            url: `/images/demo_prinsessan_${Math.min(i, 5)}.png`,
-            description: `Fallback illustration ${i + 1}`,
-            isFallback: true
-          });
+          console.warn(`⚠️ Image ${i + 1} API error:`, imageResponse.status);
         }
       } catch (imgError) {
-        console.warn('Could not generate image for paragraph', i + 1, imgError);
-        // Use demo image as fallback
-        images.push({
-          position: i,
-          url: `/images/demo_prinsessan_${Math.min(i, 5)}.png`,
-          description: `Fallback illustration ${i + 1}`,
-          isFallback: true
-        });
+        if (imgError.name === 'AbortError') {
+          console.warn(`⏰ Image ${i + 1} generation timed out`);
+        } else {
+          console.warn(`❌ Image ${i + 1} error:`, imgError.message);
+        }
       }
+      
+      // Return fallback
+      console.log(`🔄 Using fallback image for position ${i + 1}`);
+      return {
+        position: i,
+        url: `/images/demo_prinsessan_${Math.min(i, 5)}.png`,
+        description: `Fallback illustration ${i + 1}`,
+        isFallback: true
+      };
+    };
 
-      // Small delay between images to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 3000));
+    // Generate images sequentially to avoid overwhelming the function
+    for (let i = 0; i < targetImages; i++) {
+      const paragraph = paragraphs[i];
+      const imageResult = await generateWithTimeout(i, paragraph);
+      images.push(imageResult);
+      
+      // Small delay between generations
+      if (i < targetImages - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    // Fill remaining positions with fallback images
+    for (let i = targetImages; i < maxImages; i++) {
+      images.push({
+        position: i,
+        url: `/images/demo_prinsessan_${Math.min(i, 5)}.png`,
+        description: `Demo illustration ${i + 1}`,
+        isFallback: true
+      });
     }
 
     console.log('✅ Background image generation complete for story:', storyId);
