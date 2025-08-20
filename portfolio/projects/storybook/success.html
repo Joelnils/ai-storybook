@@ -372,13 +372,22 @@
                 })
             }).then(() => {
                 console.log('✅ Email generation triggered');
-                setTimeout(() => {
-                    document.getElementById('step3').innerHTML = '✅ PDF skapad';
-                    document.getElementById('step4').innerHTML = '✅ Email skickad';
-                }, 5000); // Optimistic update after 5 seconds
+                updateStepStatus();
             }).catch(() => {
                 console.log('✅ Email generation triggered (may timeout but continues)');
+                updateStepStatus();
             });
+        }
+        
+        function updateStepStatus() {
+            // Optimistic update after 5 seconds
+            setTimeout(() => {
+                const step3 = document.getElementById('step3');
+                const step4 = document.getElementById('step4');
+                
+                if (step3) step3.innerHTML = '✅ PDF skapad';
+                if (step4) step4.innerHTML = '✅ Email skickad';
+            }, 5000);
         }
 
         // Global function to update images when background generation completes
