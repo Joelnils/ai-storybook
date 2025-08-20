@@ -138,7 +138,7 @@ async function createStoryPDF(story) {
 
 async function sendStoryEmail(customerEmail, story, pdfBuffer) {
   // Configure email transporter (you'll need to add email credentials)
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: 'gmail', // or your email service
     auth: {
       user: process.env.EMAIL_USER, // Add to Netlify env vars

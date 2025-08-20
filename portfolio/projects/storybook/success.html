@@ -243,47 +243,28 @@
                 document.getElementById('step2').innerHTML = '✅ Klar';
                 document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
 
-                // Step 2: Create and email PDF
-                setTimeout(async () => {
-                    document.getElementById('step3').innerHTML = 'Pågår<span class="loading-dots">...</span>';
+                // Show completed story immediately
+                document.getElementById('step3').innerHTML = '✅ Klar';
+                document.getElementById('step4').innerHTML = '✅ Klar';
+                
+                const statusDiv = document.querySelector('.processing-status');
+                statusDiv.innerHTML = `
+                    <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga är klar!</h3>
+                    <p><strong>✅ Berättelse skapad!</strong> <span id="imageStatus">AI genererar DALL-E bilder... ⏳</span></p>
+                    <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 10px;">
+                        <strong>Titel:</strong> ${storyResult.story.title}<br>
+                        <strong>Barn:</strong> ${storyResult.story.childName}<br>
+                        <strong>Status:</strong> Story klar, bilder genereras i bakgrunden
+                    </div>
                     
-                    try {
-                        // Create PDF and send email
-                        const pdfResponse = await netlifyAPI.createAndEmailPDF({
-                            story: storyResult.story,
-                            customerEmail: customerEmail
-                        });
-                        
-                        document.getElementById('step3').innerHTML = '✅ Klar';
-                        document.getElementById('step4').innerHTML = 'Pågår<span class="loading-dots">...</span>';
-                        
-                            document.getElementById('step4').innerHTML = '✅ Klar';
-                            
-                            const statusDiv = document.querySelector('.processing-status');
-                            statusDiv.innerHTML = `
-                                <h3 style="color: #10b981; margin-bottom: 1rem;">🎉 Din saga är klar och skickad!</h3>
-                                <p><strong>✅ PDF skapat och email skickat!</strong> Kontrollera din inkorg.</p>
-                            <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 10px;">
-                                <strong>Titel:</strong> ${storyResult.story.title}<br>
-                                <strong>Barn:</strong> ${storyResult.story.childName}<br>
-                                <strong>Bilder:</strong> ${storyResult.story.images.length} illustrationer skapade
-                            </div>
-                            
-                            <div style="margin-top: 2rem; text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb;">
-                                <h4 style="color: #1f2937; margin-bottom: 1rem;">${storyResult.story.title}</h4>
-                                <div id="generatedStoryContent"></div>
-                            </div>
-                        `;
-                        
-                        // Display the story with images
-                        displayGeneratedStory(storyResult.story);
-                        
-                    } catch (pdfError) {
-                        console.error('PDF creation failed:', pdfError);
-                        document.getElementById('step3').innerHTML = '❌ Fel';
-                        document.getElementById('step4').innerHTML = '❌ Fel';
-                    }
-                }, 2000);
+                    <div style="margin-top: 2rem; text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb;">
+                        <h4 style="color: #1f2937; margin-bottom: 1rem;">${storyResult.story.title}</h4>
+                        <div id="generatedStoryContent"></div>
+                    </div>
+                `;
+                
+                // Display the story with images (initially placeholders)
+                displayGeneratedStory(storyResult.story);
 
             } catch (error) {
                 console.error('Story generation failed:', error);

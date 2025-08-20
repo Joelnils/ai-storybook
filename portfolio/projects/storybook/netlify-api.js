@@ -137,8 +137,10 @@ class NetlifyAPIClient {
             
             console.log('✅ Story text generated, starting background image generation...');
             
-            // Phase 2: Start background image generation (don't wait for it)
-            this.generateImagesInBackground(storyResult.story);
+            // Phase 2: Start background image generation (fire and forget)
+            setTimeout(() => {
+                this.generateImagesInBackground(storyResult.story);
+            }, 100);
             
             return storyResult;
 
@@ -168,15 +170,20 @@ class NetlifyAPIClient {
             });
 
             if (imageResponse.ok) {
-                const imageResult = await imageResponse.json();
-                console.log('✅ Background image generation completed');
-                
-                // Update the page with real images
-                if (typeof window !== 'undefined' && window.updateStoryImages) {
-                    window.updateStoryImages(story.storyId, imageResult.images);
+                let imageResult;
+                try {
+                    imageResult = await imageResponse.json();
+                    console.log('✅ Background image generation completed');
+                    
+                    // Update the page with real images
+                    if (typeof window !== 'undefined' && window.updateStoryImages) {
+                        window.updateStoryImages(story.storyId, imageResult.images);
+                    }
+                    
+                    return imageResult;
+                } catch (jsonError) {
+                    console.warn('⚠️ Background image response parsing failed:', jsonError);
                 }
-                
-                return imageResult;
             } else {
                 console.warn('⚠️ Background image generation failed:', imageResponse.status);
             }
