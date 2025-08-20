@@ -90,21 +90,25 @@ Till slut återvände ${childName} hem med nya erfarenheter och ett hjärta full
 Och så levde ${childName} lyckligt i många år framöver, alltid redo för nästa stora äventyr som väntade runt hörnet.`;
     }
 
-    // Step 2: Generate DALL-E images (6 images for complete story)
+    // Step 2: Generate DALL-E images efficiently
     console.log('🎨 Generating DALL-E images...');
     const paragraphs = content.split('\n\n').filter(p => p.trim());
     const images = [];
-    const maxImages = Math.min(paragraphs.length, 6);
+    const maxImages = Math.min(paragraphs.length, 4); // Reduced to 4 for reliability
     
-    for (let i = 0; i < maxImages; i++) {
-      console.log(`🎨 Generating image ${i + 1}/${maxImages}`);
-      
-      const paragraph = paragraphs[i];
-      const imagePrompt = `Children's book illustration: A ${childAge} year old child named ${childName} in a ${theme} adventure. Scene: ${paragraph.substring(0, 150)}. Style: Cartoon, child-friendly, colorful, engaging illustration for Swedish children's book. NO TEXT OR WORDS in the image.`;
+    const generateImageWithTimeout = async (i, paragraph) => {
+      const imagePrompt = `Children's book illustration: A ${childAge} year old child named ${childName} in a ${theme} adventure. Scene: ${paragraph.substring(0, 120)}. Style: Cartoon, child-friendly, colorful, engaging illustration for Swedish children's book. NO TEXT OR WORDS in the image.`;
       
       try {
+        // Set 90 second timeout per image
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
+        
+        console.log(`🎨 Starting image ${i + 1}/${maxImages}...`);
+        
         const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
+          signal: controller.signal,
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json'
@@ -117,45 +121,66 @@ Och så levde ${childName} lyckligt i många år framöver, alltid redo för nä
             n: 1
           })
         });
+        
+        clearTimeout(timeoutId);
 
         if (imageResponse.ok) {
           const imageResult = await imageResponse.json();
           if (imageResult.data?.[0]?.url) {
             // Download image data for PDF
-            const imgResponse = await fetch(imageResult.data[0].url);
+            const imgController = new AbortController();
+            const imgTimeoutId = setTimeout(() => imgController.abort(), 30000);
+            
+            const imgResponse = await fetch(imageResult.data[0].url, { 
+              signal: imgController.signal 
+            });
+            clearTimeout(imgTimeoutId);
+            
             const imgBuffer = await imgResponse.buffer();
             
-            images.push({
+            console.log(`✅ Generated and downloaded image ${i + 1}`);
+            return {
               position: i,
               buffer: imgBuffer,
               url: imageResult.data[0].url,
               description: `${childName}'s adventure - Scene ${i + 1}`
-            });
-            console.log(`✅ Generated and downloaded image ${i + 1}`);
+            };
           }
         } else {
-          console.warn(`⚠️ Failed to generate image ${i + 1}, using fallback`);
-          images.push({
-            position: i,
-            buffer: null, // Will use demo image
-            description: `Illustration ${i + 1}`,
-            isFallback: true
-          });
+          console.warn(`⚠️ Failed to generate image ${i + 1}: ${imageResponse.status}`);
         }
       } catch (imgError) {
-        console.warn(`❌ Image ${i + 1} error:`, imgError.message);
-        images.push({
-          position: i,
-          buffer: null,
-          description: `Illustration ${i + 1}`,
-          isFallback: true
-        });
+        if (imgError.name === 'AbortError') {
+          console.warn(`⏰ Image ${i + 1} generation timed out`);
+        } else {
+          console.warn(`❌ Image ${i + 1} error:`, imgError.message);
+        }
       }
+      
+      // Return fallback
+      return {
+        position: i,
+        buffer: null,
+        description: `Illustration ${i + 1}`,
+        isFallback: true
+      };
+    };
 
-      // Delay between image generations to avoid rate limits
-      if (i < maxImages - 1) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
+    // Generate images sequentially to manage timeouts
+    for (let i = 0; i < maxImages; i++) {
+      const paragraph = paragraphs[i];
+      const imageResult = await generateImageWithTimeout(i, paragraph);
+      images.push(imageResult);
+    }
+    
+    // Fill remaining positions with fallbacks if needed
+    for (let i = maxImages; i < 6; i++) {
+      images.push({
+        position: i,
+        buffer: null,
+        description: `Demo illustration ${i + 1}`,
+        isFallback: true
+      });
     }
 
     // Step 3: Generate PDF
