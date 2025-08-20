@@ -115,11 +115,24 @@ class NetlifyAPIClient {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP ${response.status}`);
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error('Failed to parse JSON response:', jsonError);
+                throw new Error('Server returned invalid response (possible timeout)');
+            }
+            
             console.log('✅ Complete story generated successfully');
             return data;
 
