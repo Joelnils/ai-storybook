@@ -103,10 +103,12 @@ class NetlifyAPIClient {
     }
 
     async generateCompleteStory(storyData) {
-        console.log('🎯 Generating complete story with images...');
+        console.log('🎯 Generating story with two-phase approach...');
         
         try {
-            const response = await fetch(`${this.baseURL}/generate-complete-story`, {
+            // Phase 1: Generate story text quickly
+            console.log('📝 Phase 1: Generating story text...');
+            const storyResponse = await fetch(`${this.baseURL}/generate-story-text`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -114,31 +116,72 @@ class NetlifyAPIClient {
                 body: JSON.stringify(storyData)
             });
 
-            if (!response.ok) {
-                let errorMessage = `HTTP ${response.status}`;
+            if (!storyResponse.ok) {
+                let errorMessage = `HTTP ${storyResponse.status}`;
                 try {
-                    const errorData = await response.json();
+                    const errorData = await storyResponse.json();
                     errorMessage = errorData.error || errorMessage;
                 } catch (e) {
-                    errorMessage = response.statusText || errorMessage;
+                    errorMessage = storyResponse.statusText || errorMessage;
                 }
                 throw new Error(errorMessage);
             }
 
-            let data;
+            let storyResult;
             try {
-                data = await response.json();
+                storyResult = await storyResponse.json();
             } catch (jsonError) {
-                console.error('Failed to parse JSON response:', jsonError);
-                throw new Error('Server returned invalid response (possible timeout)');
+                console.error('Failed to parse story response:', jsonError);
+                throw new Error('Server returned invalid response');
             }
             
-            console.log('✅ Complete story generated successfully');
-            return data;
+            console.log('✅ Story text generated, starting background image generation...');
+            
+            // Phase 2: Start background image generation (don't wait for it)
+            this.generateImagesInBackground(storyResult.story);
+            
+            return storyResult;
 
         } catch (error) {
-            console.error('❌ Complete story generation error:', error);
+            console.error('❌ Story generation error:', error);
             throw error;
+        }
+    }
+
+    async generateImagesInBackground(story) {
+        console.log('🎨 Starting background image generation...');
+        
+        try {
+            // Start background image generation
+            const imageResponse = await fetch(`${this.baseURL}/generate-images-background`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    storyContent: story.content,
+                    childName: story.childName,
+                    childAge: story.childAge || '6-8',
+                    theme: story.theme,
+                    storyId: story.storyId
+                })
+            });
+
+            if (imageResponse.ok) {
+                const imageResult = await imageResponse.json();
+                console.log('✅ Background image generation completed');
+                
+                // Update the page with real images
+                if (typeof window !== 'undefined' && window.updateStoryImages) {
+                    window.updateStoryImages(story.storyId, imageResult.images);
+                }
+                
+                return imageResult;
+            } else {
+                console.warn('⚠️ Background image generation failed:', imageResponse.status);
+            }
+        } catch (error) {
+            console.warn('Background image generation error:', error);
         }
     }
 

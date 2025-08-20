@@ -298,6 +298,34 @@
             }
         }
 
+        // Global function to update images when background generation completes
+        window.updateStoryImages = function(storyId, newImages) {
+            console.log('🎨 Updating story images for:', storyId);
+            const imageElements = document.querySelectorAll('.story-image');
+            
+            newImages.forEach(newImage => {
+                const imageElement = imageElements[newImage.position];
+                if (imageElement) {
+                    imageElement.src = newImage.url;
+                    imageElement.alt = newImage.description;
+                    
+                    // Add loading animation
+                    imageElement.style.opacity = '0.5';
+                    setTimeout(() => {
+                        imageElement.style.opacity = '1';
+                        imageElement.style.transition = 'opacity 0.5s';
+                    }, 100);
+                }
+            });
+            
+            // Update status
+            const statusElement = document.getElementById('imageStatus');
+            if (statusElement) {
+                const realImages = newImages.filter(img => !img.isFallback);
+                statusElement.innerHTML = `${realImages.length} DALL-E bilder genererade! ✅`;
+            }
+        };
+
         function displayGeneratedStory(story) {
             const container = document.getElementById('generatedStoryContent');
             if (!container) return;
