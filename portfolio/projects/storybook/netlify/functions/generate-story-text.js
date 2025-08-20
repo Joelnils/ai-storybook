@@ -48,27 +48,55 @@ INSTRUKTIONER:
 
 Skriv endast berättelsen, ingen extra text:`;
 
-    const storyResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [{ role: 'user', content: storyPrompt }],
-        max_tokens: 1500,
-        temperature: 0.8
-      })
-    });
+    let content;
+    
+    try {
+      // Add timeout protection for OpenAI call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000); // 7 second timeout
+      
+      const storyResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo', // Faster than GPT-4
+          messages: [{ role: 'user', content: storyPrompt }],
+          max_tokens: 600, // Reduced for faster generation
+          temperature: 0.8
+        })
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (!storyResponse.ok) {
-      const errorText = await storyResponse.text();
-      throw new Error(`OpenAI API error: ${storyResponse.status} - ${errorText}`);
+      if (!storyResponse.ok) {
+        throw new Error(`OpenAI API error: ${storyResponse.status}`);
+      }
+
+      const storyResult = await storyResponse.json();
+      content = storyResult.choices[0].message.content.trim();
+      
+      console.log('✅ OpenAI story generated successfully');
+      
+    } catch (openaiError) {
+      console.warn('⚠️ OpenAI generation failed, using template story:', openaiError.message);
+      
+      // Fallback to a template story if OpenAI fails
+      content = `${childName} började sitt äventyr i den magiska världen av ${theme}. Det var en solig dag när hen upptäckte att något spännande väntade runt hörnet.
+
+När ${childName} utforskade vidare, träffade hen nya vänner som skulle hjälpa till på äventyret. Tillsammans skulle de lösa mysterier och övervinna utmaningar som kom i deras väg.
+
+Plötsligt hände något oväntat som förändrade allt. ${childName} insåg att hen hade en speciell förmåga som kunde hjälpa alla andra. Det var dags att vara modig och visa vad hen gick för.
+
+Med hjälp av sina nya vänner lyckades ${childName} övervinna alla hinder. Hen lärde sig viktiga lektioner om vänskap, mod och att aldrig ge upp sina drömmar.
+
+Till slut återvände ${childName} hem med nya erfarenheter och en hjärta fullt av glädje. Äventyret hade lärt hen att allt är möjligt när man tror på sig själv.
+
+Och så levde ${childName} lyckligt i många år framöver, alltid redo för nästa stora äventyr som väntade runt hörnet.`;
     }
-
-    const storyResult = await storyResponse.json();
-    const content = storyResult.choices[0].message.content.trim();
 
     // Return story with placeholder images immediately
     const paragraphs = content.split('\n\n').filter(p => p.trim());
